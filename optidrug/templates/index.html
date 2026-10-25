@@ -1,0 +1,354 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OptiDrug | AI Bioinformatics Platform & DNA Simulation</title>
+    <!-- Fonts & Icons -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+    <!-- Plotly.js -->
+    <script src="https://cdn.plot.ly/plotly-2.35.2.min.js"></script>
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+    <div class="app-container">
+        <!-- SIDEBAR -->
+        <aside class="sidebar">
+            <div class="brand-header">
+                <div class="brand-icon">💊</div>
+                <div class="brand-text">
+                    <h1>OptiDrug</h1>
+                    <p>AI Bioinformatics & Lead Prioritization</p>
+                </div>
+            </div>
+
+            <!-- Target Selection -->
+            <div class="sidebar-section">
+                <div class="sidebar-title">🎯 Biological Target</div>
+                <div class="form-group">
+                    <label for="target-select">Select Disease & Target</label>
+                    <select id="target-select" class="form-select"></select>
+                </div>
+                <div class="form-group">
+                    <label for="input-n-samples">Library Size</label>
+                    <input type="number" id="input-n-samples" class="form-input" value="250" min="150" max="400" step="25">
+                </div>
+                <div class="form-group">
+                    <label for="input-seed">Reproducibility Seed</label>
+                    <input type="number" id="input-seed" class="form-input" value="42" step="1">
+                </div>
+                <button id="btn-run-pipeline" class="btn-primary" style="width:100%; margin-top:8px;">⚡ Re-Run Full Pipeline</button>
+            </div>
+
+            <!-- Multi-Objective Sliders -->
+            <div class="sidebar-section">
+                <div class="sidebar-title">⚖️ Optimization Weights</div>
+                <p style="font-size:0.75rem; color:var(--text-muted); margin-bottom:12px;">Adjust criteria trade-offs live:</p>
+                
+                <div class="slider-group">
+                    <div class="slider-header">
+                        <span>Effectiveness (Bioactivity)</span>
+                        <span id="w_eff-val" class="slider-val">35%</span>
+                    </div>
+                    <input type="range" id="w_eff" min="0" max="1" step="0.05" value="0.35">
+                </div>
+
+                <div class="slider-group">
+                    <div class="slider-header">
+                        <span>Safety Profile (Low Tox)</span>
+                        <span id="w_safe-val" class="slider-val">25%</span>
+                    </div>
+                    <input type="range" id="w_safe" min="0" max="1" step="0.05" value="0.25">
+                </div>
+
+                <div class="slider-group">
+                    <div class="slider-header">
+                        <span>Low CYP Interaction</span>
+                        <span id="w_inter-val" class="slider-val">15%</span>
+                    </div>
+                    <input type="range" id="w_inter" min="0" max="1" step="0.05" value="0.15">
+                </div>
+
+                <div class="slider-group">
+                    <div class="slider-header">
+                        <span>Synthetic Economy (Cost)</span>
+                        <span id="w_cost-val" class="slider-val">15%</span>
+                    </div>
+                    <input type="range" id="w_cost" min="0" max="1" step="0.05" value="0.15">
+                </div>
+
+                <div class="slider-group">
+                    <div class="slider-header">
+                        <span>Drug-Likeness (Rule of 5)</span>
+                        <span id="w_drug-val" class="slider-val">10%</span>
+                    </div>
+                    <input type="range" id="w_drug" min="0" max="1" step="0.05" value="0.10">
+                </div>
+            </div>
+
+            <!-- Integrations -->
+            <div class="sidebar-section" style="margin-top:auto;">
+                <div class="sidebar-title">🔑 External Integrations</div>
+                <div style="font-size:0.82rem; margin-bottom:8px;">
+                    <span style="color:#34d399;">●</span> NCBI Entrez API: <b>Active</b>
+                </div>
+                <div style="font-size:0.82rem; margin-bottom:12px;">
+                    <span style="color:#60a5fa;">●</span> Mol* 3D Viewer Sidecar:
+                    <div style="margin-top:4px;">
+                        <a href="sidecar://science/biomolecular_structure_viewer/ui.html" style="color:#38bdf8; text-decoration:none; font-weight:600;">[Biomolecular Structure Viewer]</a>
+                    </div>
+                </div>
+            </div>
+        </aside>
+
+        <!-- MAIN VIEW -->
+        <main class="main-content">
+            <!-- Top Header -->
+            <header class="top-header">
+                <div class="pipeline-flow">
+                    <span class="pipe-step active">Disease</span>
+                    <span class="pipe-arrow">➔</span>
+                    <span class="pipe-step active">Gene (DNA)</span>
+                    <span class="pipe-arrow">➔</span>
+                    <span class="pipe-step active">Protein</span>
+                    <span class="pipe-arrow">➔</span>
+                    <span class="pipe-step active">Target Pocket</span>
+                    <span class="pipe-arrow">➔</span>
+                    <span class="pipe-step active">Candidates</span>
+                </div>
+                <div class="header-badges">
+                    <span class="badge badge-ncbi">✓ NCBI E-utilities Connected</span>
+                    <span class="badge badge-disclaimer">⚠️ Research Prioritization Demo</span>
+                </div>
+            </header>
+
+            <!-- Tabs Navigation -->
+            <nav class="tabs-nav">
+                <button class="tab-btn active" data-tab="tab-dna">🧬 3D DNA & Mutation Simulation</button>
+                <button class="tab-btn" data-tab="tab-biology">🔬 Target Biology & NCBI</button>
+                <button class="tab-btn" data-tab="tab-pipeline">🧪 Data Preprocessing</button>
+                <button class="tab-btn" data-tab="tab-model">🤖 Random Forest QSAR</button>
+                <button class="tab-btn" data-tab="tab-optimization">⚖️ Multi-Objective Optimization</button>
+                <button class="tab-btn" data-tab="tab-candidates">🏆 Prioritized Candidates</button>
+            </nav>
+
+            <!-- TAB 1: 3D DNA SIMULATION & BIOLOGICAL PROPAGATION -->
+            <section id="tab-dna" class="tab-content active">
+                <div class="card-title" style="margin-bottom:12px;">
+                    <div>
+                        <h2 style="font-size:1.4rem; font-weight:800; color:#f8fafc;">3D DNA Double Helix & Disease Mutation Propagation</h2>
+                        <p style="font-size:0.88rem; color:#94a3b8;">Simulate how single-nucleotide DNA mutations propagate through transcription, alter protein kinase pocket conformation, and are rescued by candidate small-molecule inhibitors.</p>
+                    </div>
+                    <span id="dna-status-badge" class="status-pill wildtype">🟢 WILD-TYPE (Healthy)</span>
+                </div>
+
+                <div class="grid-2">
+                    <!-- 3D DNA Canvas Viewport -->
+                    <div class="dna-sim-container">
+                        <canvas id="dna-canvas"></canvas>
+                        <div class="sim-controls-overlay">
+                            <button id="btn-toggle-mutant" class="sim-btn">Simulate Oncogenic Mutation</button>
+                            <button id="btn-pause-dna" class="sim-btn">⏸ Pause Spin</button>
+                        </div>
+                    </div>
+
+                    <!-- Propagation & Consequence Cascade -->
+                    <div>
+                        <div class="card" style="margin-bottom:16px;">
+                            <div class="card-title">
+                                <span>1. Genomic DNA Locus & Codon Shift</span>
+                            </div>
+                            <div id="sim-codon-impact">
+                                <!-- Populated dynamically by JS -->
+                            </div>
+                        </div>
+
+                        <div class="card" style="margin-bottom:16px;">
+                            <div class="card-title">
+                                <span>2. Protein Structural Consequence</span>
+                            </div>
+                            <div id="sim-protein-impact">
+                                <!-- Populated dynamically by JS -->
+                            </div>
+                        </div>
+
+                        <div class="card">
+                            <div class="card-title">
+                                <span>3. Small-Molecule Inhibitor Target Rescue</span>
+                            </div>
+                            <div id="sim-rescue-impact">
+                                <!-- Populated dynamically by JS -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- TAB 2: TARGET BIOLOGY & NCBI -->
+            <section id="tab-biology" class="tab-content">
+                <div class="grid-2">
+                    <div class="card">
+                        <div class="card-title">Biological Grounding Details</div>
+                        <div id="target-bio-details">Loading target biology...</div>
+                    </div>
+                    <div class="card">
+                        <div class="card-title">Recent PubMed Research Literature (NCBI E-utilities)</div>
+                        <div id="target-pubmed-list">Loading PubMed citations...</div>
+                        <div style="margin-top:16px; padding:12px; background:#172138; border-radius:8px;">
+                            <h5 style="margin-bottom:4px; font-size:0.9rem;">3D Biomolecular Structure</h5>
+                            <p style="font-size:0.82rem; color:#94a3b8; margin-bottom:8px;">Inspect experimental PDB and AlphaFold protein-ligand complexes interactively in Mol*:</p>
+                            <a href="sidecar://science/biomolecular_structure_viewer/ui.html" class="btn-primary" style="display:inline-block; text-decoration:none; font-size:0.82rem;">Open Mol* Biomolecular Structure Viewer</a>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- TAB 3: DATA PREPROCESSING PIPELINE -->
+            <section id="tab-pipeline" class="tab-content">
+                <div class="card-title">Data Preprocessing Quality Assurance Pipeline</div>
+                <p style="font-size:0.88rem; color:#94a3b8; margin-bottom:20px;">
+                    Bioinformatics data hygiene: <b>Deduplication ➔ Missing Value Imputation (Median) ➔ One-Hot Scaffold Encoding ➔ Min-Max Scaling (0–1) ➔ 80/20 Train/Test Split</b>.
+                </p>
+
+                <div class="grid-4" style="margin-bottom:24px;">
+                    <div class="metric-box">
+                        <div id="audit-initial" class="metric-val highlight-blue">0</div>
+                        <div class="metric-lbl">Initial Records</div>
+                    </div>
+                    <div class="metric-box">
+                        <div id="audit-dedup" class="metric-val highlight-amber">0</div>
+                        <div class="metric-lbl">Duplicates Pruned</div>
+                    </div>
+                    <div class="metric-box">
+                        <div id="audit-imputed" class="metric-val highlight-purple">0</div>
+                        <div class="metric-lbl">Missing Values Imputed</div>
+                    </div>
+                    <div class="metric-box">
+                        <div id="audit-train" class="metric-val highlight-green">0</div>
+                        <div class="metric-lbl">Train Set (80%)</div>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-title">Molecular Descriptors Utilized</div>
+                    <p style="font-size:0.88rem; color:#cbd5e1; line-height:1.6;">
+                        • <b>Molecular Weight (MW):</b> Lipinski cutoff $\le 500\text{ Da}$, controls steric accessibility to kinase cleft.<br>
+                        • <b>$\text{LogP}$ (Lipophilicity):</b> Octanol-water partition coefficient, dictates membrane permeability and hydrophobic binding.<br>
+                        • <b>$\text{HBD}$ & $\text{HBA}$ (Hydrogen Bond Donors/Acceptors):</b> Dictates electrostatic anchoring with hinge residues (e.g. Met793 in EGFR).<br>
+                        • <b>$\text{TPSA}$ (Polar Surface Area):</b> Veber limit $\le 140\text{ \AA}^2$, predictive of oral bioavailability and cellular influx.<br>
+                        • <b>Rotatable Bonds:</b> Veber limit $\le 10$, governs entropic loss upon receptor-ligand complexation.
+                    </p>
+                </div>
+            </section>
+
+            <!-- TAB 4: RANDOM FOREST MODEL EVALUATION -->
+            <section id="tab-model" class="tab-content">
+                <div class="grid-4" style="margin-bottom:24px;">
+                    <div class="metric-box">
+                        <div id="metric-r2" class="metric-val highlight-blue">0.000</div>
+                        <div class="metric-lbl">Held-Out Test R² (Target ~0.58)</div>
+                    </div>
+                    <div class="metric-box">
+                        <div id="metric-mae" class="metric-val highlight-green">0.000</div>
+                        <div class="metric-lbl">Held-Out MAE (Target ~0.075)</div>
+                    </div>
+                    <div class="metric-box">
+                        <div id="metric-rmse" class="metric-val highlight-purple">0.000</div>
+                        <div class="metric-lbl">Held-Out RMSE</div>
+                    </div>
+                    <div class="metric-box">
+                        <div id="metric-pearson" class="metric-val highlight-amber">0.000</div>
+                        <div class="metric-lbl">Pearson Correlation (r)</div>
+                    </div>
+                </div>
+
+                <div class="grid-2">
+                    <div class="card">
+                        <div id="eval-plot"></div>
+                    </div>
+                    <div class="card">
+                        <div id="feature-plot"></div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- TAB 5: MULTI-OBJECTIVE OPTIMIZATION STUDIO -->
+            <section id="tab-optimization" class="tab-content">
+                <div class="card-title">Multi-Objective Mathematical Optimization Studio</div>
+                <p style="font-size:0.88rem; color:#94a3b8; margin-bottom:20px;">
+                    Balances <b>Effectiveness</b>, <b>Safety (Low Toxicity)</b>, <b>CYP450 Interaction Risk</b>, <b>Synthetic Cost</b>, and <b>Lipinski Compliance</b> using Weighted Sum, Derringer-Suich Geometric Desirability ($D$), and Pareto Non-Dominated Sorting.
+                </p>
+
+                <div class="grid-2">
+                    <div class="card">
+                        <div id="pareto-plot"></div>
+                    </div>
+                    <div class="card">
+                        <div id="radar-plot"></div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- TAB 6: PRIORITIZED CANDIDATES -->
+            <section id="tab-candidates" class="tab-content">
+                <!-- Inspector Card -->
+                <div id="candidate-inspector"></div>
+
+                <!-- Table Controls -->
+                <div class="card" style="padding:16px;">
+                    <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px; margin-bottom:16px;">
+                        <div style="display:flex; gap:12px; align-items:center; flex-wrap:wrap;">
+                            <input type="text" id="candidate-search" class="form-input" style="width:240px;" placeholder="Search ID or Name...">
+                            <label style="font-size:0.85rem; display:flex; align-items:center; gap:6px; cursor:pointer;">
+                                <input type="checkbox" id="filter-pareto"> Pareto Optimal Only ⭐
+                            </label>
+                            <label style="font-size:0.85rem; display:flex; align-items:center; gap:6px; cursor:pointer;">
+                                <input type="checkbox" id="filter-lipinski"> Lipinski Compliant
+                            </label>
+                            <select id="filter-scaffold" class="form-select" style="width:180px;"></select>
+                        </div>
+                        <button id="btn-download-csv" class="btn-primary" style="background:#059669;">📥 Export CSV Report</button>
+                    </div>
+
+                    <div class="data-table-wrapper">
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>Rank</th>
+                                    <th>Compound</th>
+                                    <th>Scaffold</th>
+                                    <th>Pred pIC50</th>
+                                    <th>Safety Risk</th>
+                                    <th>CYP Risk</th>
+                                    <th>Cost</th>
+                                    <th>Composite</th>
+                                    <th>Pareto?</th>
+                                    <th>Lipinski</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="candidates-tbody">
+                                <!-- Populated dynamically by JS -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <!-- Loading Overlay -->
+    <div id="loading-overlay" style="display:none; position:fixed; inset:0; background:rgba(11,15,25,0.85); backdrop-filter:blur(6px); z-index:999; align-items:center; justify-content:center; flex-direction:column;">
+        <div style="font-size:3rem; animation: pulse 1s infinite alternate;">🧬</div>
+        <div style="color:#f8fafc; font-size:1.1rem; font-weight:700; margin-top:12px;">Running OptiDrug QSAR & Mathematical Optimization...</div>
+        <div style="color:#94a3b8; font-size:0.85rem; margin-top:4px;">Training Random Forest Regressor & Solving Pareto Frontier</div>
+    </div>
+
+    <!-- Application Scripts -->
+    <script src="/static/js/dna_sim.js"></script>
+    <script src="/static/js/app.js"></script>
+</body>
+</html>
